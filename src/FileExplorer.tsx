@@ -6,6 +6,7 @@ import * as path from 'node:path';
 interface FileExplorerProps {
   focused: boolean;
   colors: any;
+  onClick?: () => void; // Add onClick prop
 }
 
 interface FileItem {
@@ -15,7 +16,7 @@ interface FileItem {
   mtime: Date | null; // Modification time
 }
 
-function FileExplorer({ focused, colors }: FileExplorerProps) {
+function FileExplorer({ focused, colors, onClick }: FileExplorerProps) {
   const [currentPath, setCurrentPath] = useState('.');
   const [items, setItems] = useState<FileItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -129,6 +130,7 @@ function FileExplorer({ focused, colors }: FileExplorerProps) {
         rootOptions: { backgroundColor: colors.background },
         viewportOptions: { backgroundColor: colors.background },
       }}
+      onClick={onClick} // Pass onClick to scrollbox
     >
       <text fg={colors.primary}>Current Path: {currentPath}</text>
       {error && <text fg={colors.error}>Error: {error}</text>}
