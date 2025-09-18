@@ -73,7 +73,7 @@ class LoggingDeepSeekLLMNode extends DeepSeekLLMNode {
   }
 
   // Implement preparePrompt as required by AgentNode
-  preparePrompt(shared: any): string {
+  override preparePrompt(shared: any): string {
     // The AgentNode sets the prompt in this.params.prompt
     const prompt = this.params.prompt;
     if (!prompt) {
@@ -83,14 +83,33 @@ class LoggingDeepSeekLLMNode extends DeepSeekLLMNode {
     return prompt;
   }
 
-  async execAsync(prepRes: any, shared: any): Promise<any> {
+  override async execAsync(prepRes: any, shared: any): Promise<any> {
     const prompt = this.params.prompt; // Assuming prompt is set in params
     this.onAgentMessage({ type: 'debug', content: JSON.stringify({ prompt }) });
 
     try {
       const llmResponse = await super.execAsync(prepRes, shared);
-      this.onAgentMessage({ type: 'llm_response', content: JSON.stringify(llmResponse) });
-      return JSON.parse(llmResponse);
+      this.onAgentMessage({ type: 'debug', content: `Raw LLM Response from super.execAsync: ${JSON.stringify(llmResponse)}` });
+      const parsedLlmResponse = JSON.parse(llmResponse); // Re-introduce JSON.parse
+      // Transform the LLM's response to the format expected by AgentNode
+      const transformedResponse = {
+        choices: [
+          {
+            message: {
+              content: parsedLlmResponse.thought,
+              tool_calls: parsedLlmResponse.tool_calls.map((tc: any) => ({
+                function: {
+                  name: tc.tool,
+                  arguments: JSON.stringify(tc.parameters)
+                }
+              }))
+            }
+          }
+        ]
+      };
+      this.onAgentMessage({ type: 'llm_response', content: JSON.stringify(transformedResponse) }); // Use transformedResponse here
+      this.onAgentMessage({ type: 'debug', content: `Transformed response: ${JSON.stringify(transformedResponse)}` });
+      return transformedResponse;
     } catch (error: any) {
       this.onAgentMessage({ type: 'agent', content: `LLM Error: ${error.message}` });
       throw error; // Re-throw to propagate the error
@@ -145,9 +164,10 @@ class QflowAgent {
     this.agentNode = new AgentNode(this.llm, this.tools); // Use AgentNode directly
     this.agentNode.setParams({ systemPrompt: systemPrompt }); // Set the system prompt
 
+    this.onAgentMessage({ type: 'debug', content: 'Assigning onThought callback.' });
     // Custom onThought callback to send agent's thoughts to the TUI
     this.agentNode.onThought = (thought: string) => {
-      this.onAgentMessage({ type: 'debug', content: `Thought content: ${thought}` });
+      this.onAgentMessage({ type: 'debug', content: `onThought callback triggered with thought: ${thought}` });
       this.onAgentMessage({ type: 'thought', content: thought });
     };
 

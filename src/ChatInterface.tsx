@@ -31,17 +31,20 @@ const FormattedMessageContent: React.FC<{ type: string; content: string; colors:
     if (type === 'llm_response') {
       try {
         const parsedContent = JSON.parse(content);
+        const messageContent = parsedContent.choices?.[0]?.message?.content;
+        const toolCalls = parsedContent.choices?.[0]?.message?.tool_calls;
+
         return (
           <box flexDirection="column">
             <text fg={colors.primary}>LLM Response:</text>
-            <text fg={colors.foreground}>Thought: {parsedContent.thought}</text>
-            {parsedContent.tool_calls && parsedContent.tool_calls.length > 0 && (
+            {messageContent && <text fg={colors.foreground}>Thought: {messageContent}</text>}
+            {toolCalls && toolCalls.length > 0 && (
               <box flexDirection="column" marginLeft={2}>
                 <text fg={colors.accent}>Tool Calls:</text>
-                {parsedContent.tool_calls.map((tc: any, idx: number) => (
+                {toolCalls.map((tc: any, idx: number) => (
                   <box key={idx} flexDirection="column" marginLeft={2}>
-                    <text fg={colors.accent}>- Tool: {tc.tool}</text>
-                    <text fg={colors.info}>  Args: {JSON.stringify(tc.parameters)}</text>
+                    <text fg={colors.accent}>- Tool: {tc.function.name}</text>
+                    <text fg={colors.info}>  Args: {tc.function.arguments}</text>
                   </box>
                 ))}
               </box>
