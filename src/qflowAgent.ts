@@ -4,7 +4,10 @@ import { AgentNode, DeepSeekLLMNode, ShellCommandNode, ReadFileNode, WriteFileNo
 // Define a type for the messages that the agent will process
 interface AgentMessage {
   type: 'user' | 'agent' | 'tool' | 'thought' | 'debug' | 'llm_response';
-  content: string;
+  content?: string;
+  thoughts?: string;
+  toolCalls?: { tool: string; args: Record<string, any> }[];
+  toolResults?: { toolName: string; args: Record<string, any>; result: any }[];
 }
 
 // Custom Tool to get user input via the TUI
@@ -168,20 +171,28 @@ class QflowAgent {
     // Custom onThought callback to send agent's thoughts to the TUI
     this.agentNode.onThought = (thought: string) => {
       this.onAgentMessage({ type: 'debug', content: `onThought callback triggered with thought: ${thought}` });
-      this.onAgentMessage({ type: 'thought', content: thought });
+      this.onAgentMessage({ type: 'agent', thoughts: thought }); // Send thoughts as part of an agent message
     };
 
-    // Custom postAsync to handle agent's output and send it to the TUI
+    this.agentNode.onToolCall = (toolCall: { tool: string; args: Record<string, any> }) => {
+      this.onAgentMessage({ type: 'debug', content: `onToolCall callback triggered with toolCall: ${JSON.stringify(toolCall)}` });
+      this.onAgentMessage({ type: 'agent', toolCalls: [toolCall] });
+    };
+
+    this.agentNode.onToolResult = (toolName: string, args: Record<string, any>, result: any) => {
+      this.onAgentMessage({ type: 'debug', content: `onToolResult callback triggered with toolName: ${toolName}, args: ${JSON.stringify(args)}, result: ${JSON.stringify(result)}` });
+      this.onAgentMessage({ type: 'agent', toolResults: [{ toolName, args, result }] });
+    };
+
+    // Custom postAsync to handle agent's final output and send it to the TUI
     this.agentNode.postAsync = async (shared: any, prepRes: any, execRes: any) => {
-      // The AgentNode's execRes will contain the final answer or tool outputs
+      this.onAgentMessage({ type: 'debug', content: `postAsync execRes: ${JSON.stringify(execRes)}` });
+      // The AgentNode's execRes will contain the final answer
       if (execRes && execRes.tool === 'finish') {
         this.onAgentMessage({ type: 'agent', content: `Agent finished: ${execRes.output}` });
-      } else if (execRes && execRes.tool) {
-        // This is a tool execution, we can log it as an agent action
-        this.onAgentMessage({ type: 'tool', content: JSON.stringify({ tool: execRes.tool, args: execRes.args, output: execRes.output }) });
       } else {
-        // Generic agent output
-        this.onAgentMessage({ type: 'agent', content: `Agent output: ${JSON.stringify(execRes)}` });
+        // Generic agent output, if any, not covered by onThought, onToolCall, or onToolResult
+        this.onAgentMessage({ type: 'debug', content: `Generic agent output in postAsync: ${JSON.stringify(execRes)}` });
       }
       return 'default';
     };
