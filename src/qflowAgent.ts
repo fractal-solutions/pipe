@@ -1,5 +1,5 @@
 import { AsyncFlow, AsyncNode, Node } from '@fractal-solutions/qflow';
-import { AgentNode, DeepSeekLLMNode, ShellCommandNode, ReadFileNode, WriteFileNode, ListDirectoryNode } from '@fractal-solutions/qflow/nodes';
+import { AgentNode, DeepSeekLLMNode, ShellCommandNode, ReadFileNode, WriteFileNode, ListDirectoryNode, UserInputNode } from '@fractal-solutions/qflow/nodes';
 
 // Define a type for the messages that the agent will process
 interface AgentMessage {
@@ -8,99 +8,60 @@ interface AgentMessage {
 }
 
 // Custom Tool to get user input via the TUI
-class CustomUserInputTool extends AsyncNode {
-  private onAgentQuery: (prompt: string) => Promise<string>;
+// class CustomUserInputTool extends AsyncNode {
+//   private onAgentQuery: (prompt: string) => Promise<string>;
 
-  constructor(onAgentQuery: (prompt: string) => Promise<string>) {
-    super();
-    this.onAgentQuery = onAgentQuery;
-  }
+//   constructor(onAgentQuery: (prompt: string) => Promise<string>) {
+//     super();
+//     this.onAgentQuery = onAgentQuery;
+//   }
 
-  // The tool name that the AgentNode will use
-  name = 'user_input_tool';
-  description = 'Prompts the user for input and waits for their response.';
-  parameters = {
-    type: 'object',
-    properties: {
-      prompt: {
-        type: 'string',
-        description: 'The message to display to the user when asking for input.',
-      },
-    },
-    required: ['prompt'],
-  };
+//   // The tool name that the AgentNode will use
+//   name = 'user_input_tool';
+//   description = 'Prompts the user for input and waits for their response.';
+//   parameters = {
+//     type: 'object',
+//     properties: {
+//       prompt: {
+//         type: 'string',
+//         description: 'The message to display to the user when asking for input.',
+//       },
+//     },
+//     required: ['prompt'],
+//   };
 
-  async execAsync(prepRes: any, shared: any): Promise<any> {
-    const { prompt } = this.params; // Access parameters set by the AgentNode
-    if (!prompt) {
-      throw new Error('Prompt is required for user_input_tool.');
-    }
-    // Call the external function to get user input from the TUI
-    const userInput = await this.onAgentQuery(prompt);
-    return { userInput };
-  }
-}
+//   async execAsync(prepRes: any, shared: any): Promise<any> {
+//     const { prompt } = this.params; // Access parameters set by the AgentNode
+//     if (!prompt) {
+//       throw new Error('Prompt is required for user_input_tool.');
+//     }
+//     // Call the external function to get user input from the TUI
+//     const userInput = await this.onAgentQuery(prompt);
+//     return { userInput };
+//   }
+// }
 
 // RobustAgentNode with custom parseLLMResponse logic
-class RobustAgentNode extends AgentNode {
-  parseLLMResponse(llmResponse: any) {
-    // Log raw LLM response for debugging
-    // console.log('RAW LLM RESPONSE:', llmResponse);
+// class RobustAgentNode extends AgentNode {
+//   private onAgentMessage: (message: AgentMessage) => void;
 
-    // If it's a string, try to parse it as JSON. If not, treat as thought.
-    if (typeof llmResponse === 'string') {
-      // Attempt to extract JSON from string if it's embedded
-      const firstBrace = llmResponse.indexOf('{');
-      const lastBrace = llmResponse.lastIndexOf('}');
-      let jsonString = llmResponse;
+//   constructor(llm: any, tools: any, onAgentMessage: (message: AgentMessage) => void) {
+//     super(llm, tools);
+//     this.onAgentMessage = onAgentMessage;
+//   }
 
-      if (firstBrace !== -1 && lastBrace > firstBrace) {
-        jsonString = llmResponse.substring(firstBrace, lastBrace + 1);
-      } else {
-        // If no braces found, it's definitely not JSON, treat as thought
-        return { thought: llmResponse, toolCalls: [], parallel: false };
-      }
-
-      // Now, try to parse the extracted string as JSON
-      try {
-        const parsed = JSON.parse(jsonString);
-        if (parsed.thought !== undefined && Array.isArray(parsed.tool_calls)) {
-          return {
-            thought: parsed.thought,
-            toolCalls: parsed.tool_calls,
-            parallel: parsed.parallel || false,
-          };
-        }
-      } catch (e) {
-        // JSON parsing failed, or not in expected format.
-        // Fall through to treat the original llmResponse as a plain text thought.
-      }
-      // If parsing failed or not in expected format, treat the original string as a thought
-      return { thought: llmResponse, toolCalls: [], parallel: false };
-    }
-
-    // If it's an object, assume it's an OpenAI-like response and process it.
-    const rawData = llmResponse;
-    if (rawData.choices && rawData.choices.length > 0 && rawData.choices[0] && rawData.choices[0].message) {
-      const message = rawData.choices[0].message;
-
-      if (message.tool_calls && message.tool_calls.length > 0) {
-        const toolCalls = message.tool_calls.map((tc: any) => ({
-          tool: tc.function.name,
-          parameters: JSON.parse(tc.function.arguments)
-        }));
-        const thought = message.reasoning_content || `Calling tool(s): ${toolCalls.map((tc: any) => tc.tool).join(', ')}`;
-        return { thought, toolCalls, parallel: false };
-      } else if (typeof message.content === 'string') {
-        // Recursively call parseLLMResponse for the content string
-        return this.parseLLMResponse(message.content);
-      }
-    }
-
-    // Fallback for unexpected LLM response structures
-    return { thought: JSON.stringify(llmResponse), toolCalls: [], parallel: false };
-  }
-}
+//   parseLLMResponse(llmResponse: any) {
+//     this.onAgentMessage({ type: 'agent', content: 'DEBUG: Custom parseLLMResponse was called! (Forcing shell_command)' });
+//     return {
+//       thought: "Forcing shell_command to test AgentNode behavior.",
+//       toolCalls: [{
+//         tool: 'shell_command',
+//         parameters: { command: 'ls -la' }
+//       }],
+//       parallel: false
+//     };
+//   }
+// }
 
 // Custom LoggingDeepSeekLLMNode
 class LoggingDeepSeekLLMNode extends DeepSeekLLMNode {
@@ -124,11 +85,11 @@ class LoggingDeepSeekLLMNode extends DeepSeekLLMNode {
 
   async execAsync(prepRes: any, shared: any): Promise<any> {
     const prompt = this.params.prompt; // Assuming prompt is set in params
-    this.onAgentMessage({ type: 'llm_input', content: `Sending prompt to LLM: ${prompt}` });
+    this.onAgentMessage({ type: 'llm_input', content: JSON.stringify({ prompt }) });
 
     try {
       const llmResponse = await super.execAsync(prepRes, shared);
-      this.onAgentMessage({ type: 'llm_output', content: `Received raw LLM response: ${JSON.stringify(llmResponse)}` });
+      this.onAgentMessage({ type: 'llm_output', content: JSON.stringify(llmResponse) });
       return llmResponse;
     } catch (error: any) {
       this.onAgentMessage({ type: 'agent', content: `LLM Error: ${error.message}` });
@@ -139,7 +100,7 @@ class LoggingDeepSeekLLMNode extends DeepSeekLLMNode {
 
 class QflowAgent {
   private agentFlow: AsyncFlow;
-  private agentNode: RobustAgentNode; // Use RobustAgentNode
+  private agentNode: AgentNode; // Use AgentNode
   private llm: LoggingDeepSeekLLMNode; // Use LoggingDeepSeekLLMNode
   private tools: Record<string, Node | AsyncNode>;
   private onAgentMessage: (message: AgentMessage) => void;
@@ -157,13 +118,13 @@ class QflowAgent {
     this.llm = new LoggingDeepSeekLLMNode(onAgentMessage); // Pass onAgentMessage to LoggingLLMNode
     this.llm.setParams({ apiKey: deepseekApiKey || '' });
 
-    // Initialize tools, including our custom user input tool
+    // Initialize tools
     this.tools = {
       shell_command: new ShellCommandNode(),
       read_file: new ReadFileNode(),
       write_file: new WriteFileNode(),
       list_directory: new ListDirectoryNode(),
-      user_input_tool: new CustomUserInputTool(onAgentQuery),
+      user_input: new UserInputNode(), // Use UserInputNode directly
       // Add other tools as needed
     };
 
@@ -179,9 +140,9 @@ class QflowAgent {
       return `### ${tool.name}: ${tool.description}\nParameters: ${params}`;
     }).join('\n');
 
-    const systemPrompt = `You are a helpful AI assistant. Your primary goal is to assist the user by executing tasks using the available tools. Once you have completed the task or gathered the necessary information, use the 'finish' tool to provide the summarized findings or answer.\n\nAvailable Tools:\n${toolDescriptions}\n\nCRITICAL: Your response MUST be a single JSON object with 'thought' and 'tool_calls'. DO NOT generate code, prose, or any other text outside of the JSON structure. DO NOT use the 'llm_reasoning' tool. Use the 'finish' tool when you have the final answer.\n\nExample response:\n{\n  "thought": "I need to search for information.",\n  "tool_calls": [\n    {\n      "tool": "duckduckgo_search",\n      "parameters": {\n        "query": "latest AI research"\n      }\n    }\n  ]\n}\n\nWhen you have completed the task, use the 'finish' tool.`;
+    const systemPrompt = `You are a helpful AI assistant. Your primary goal is to assist the user by executing tasks using the available tools. Once you have completed the task or gathered the necessary information, use the 'finish' tool to provide the summarized findings or answer.\n\nAvailable Tools:\n${toolDescriptions}\n\nCRITICAL: Your response MUST be a single JSON object with 'thought' and 'tool_calls'. If you are providing a final answer, use the 'finish' tool. DO NOT generate code, prose, or any other text outside of the JSON structure. DO NOT use the 'llm_reasoning' tool.\n\nExample response for tool call:\n{\n  "thought": "I need to search for information.",\n  "tool_calls": [\n    {\n      "tool": "duckduckgo_search",\n      "parameters": {\n        "query": "latest AI research"\n      }\n    }\n  ]\n}\n\nExample response for final answer:\n{\n  "thought": "I have completed the task.",\n  "tool_calls": [\n    {\n      "tool": "finish",\n      "parameters": {\n        "output": "The answer to your question is..."\n      }\n    }\n  ]\n}\n\nWhen you have completed the task, use the 'finish' tool.`;
 
-    this.agentNode = new RobustAgentNode(this.llm, this.tools);
+    this.agentNode = new AgentNode(this.llm, this.tools); // Use AgentNode directly
     this.agentNode.setParams({ systemPrompt: systemPrompt }); // Set the system prompt
 
     // Custom onThought callback to send agent's thoughts to the TUI
@@ -189,24 +150,15 @@ class QflowAgent {
       this.onAgentMessage({ type: 'thought', content: thought });
     };
 
-    // Custom onLLMInput and onLLMOutput for detailed logging
-    // These are now handled by LoggingDeepSeekLLMNode
-    // this.agentNode.onLLMInput = (input: any) => {
-    //   this.onAgentMessage({ type: 'llm_input', content: `LLM Input: ${JSON.stringify(input)}` });
-    // };
-
-    // this.agentNode.onLLMOutput = (output: any) => {
-    //   this.onAgentMessage({ type: 'llm_output', content: `LLM Output: ${JSON.stringify(output)}` });
-    // };
-
     // Custom postAsync to handle agent's output and send it to the TUI
     this.agentNode.postAsync = async (shared: any, prepRes: any, execRes: any) => {
+      this.onAgentMessage({ type: 'agent', content: 'DEBUG: postAsync execRes: ' + JSON.stringify(execRes, null, 2) });
       // The AgentNode's execRes will contain the final answer or tool outputs
       if (execRes && execRes.tool === 'finish') {
         this.onAgentMessage({ type: 'agent', content: `Agent finished: ${execRes.output}` });
       } else if (execRes && execRes.tool) {
         // This is a tool execution, we can log it as an agent action
-        this.onAgentMessage({ type: 'tool', content: `Agent used tool: ${execRes.tool} with args: ${JSON.stringify(execRes.args)}` });
+        this.onAgentMessage({ type: 'tool', content: JSON.stringify({ tool: execRes.tool, args: execRes.args }) });
       } else {
         // Generic agent output
         this.onAgentMessage({ type: 'agent', content: `Agent output: ${JSON.stringify(execRes)}` });
@@ -218,19 +170,16 @@ class QflowAgent {
   }
 
   async run(goal: string) {
-    // DEBUG: QflowAgent.run called.
-    this.onAgentMessage({ type: 'agent', content: 'DEBUG: QflowAgent.run called with goal: ' + goal });
+    // Remove all onAgentMessage calls from here
     const sharedState = { goal };
-    // Set the goal directly on the agentNode before running the flow
-    this.agentNode.setParams({ goal: goal }); // FIX: Set goal here
+    this.agentNode.setParams({ goal: goal });
     try {
-      // DEBUG: AsyncFlow.runAsync started.
       this.onAgentMessage({ type: 'agent', content: 'DEBUG: AsyncFlow.runAsync started.' });
       await this.agentFlow.runAsync(sharedState);
-      // DEBUG: AsyncFlow.runAsync finished.
       this.onAgentMessage({ type: 'agent', content: 'DEBUG: AsyncFlow.runAsync finished.' });
     } catch (error: any) {
-      this.onAgentMessage({ type: 'agent', content: `Error: ${error.message}` });
+      this.onAgentMessage({ type: 'agent', content: `Error during AsyncFlow execution: ${error.message}` });
+      console.error('Error during AsyncFlow execution:', error); // Log to console for more detail
     }
   }
 }
