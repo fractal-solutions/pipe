@@ -3,7 +3,7 @@ import { AgentNode, DeepSeekLLMNode, ShellCommandNode, ReadFileNode, WriteFileNo
 
 // Define a type for the messages that the agent will process
 interface AgentMessage {
-  type: 'user' | 'agent' | 'tool' | 'thought' | 'llm_input' | 'llm_output'; // Added llm_input/output types
+  type: 'user' | 'agent' | 'tool' | 'thought' | 'debug' | 'llm_response';
   content: string;
 }
 
@@ -85,12 +85,12 @@ class LoggingDeepSeekLLMNode extends DeepSeekLLMNode {
 
   async execAsync(prepRes: any, shared: any): Promise<any> {
     const prompt = this.params.prompt; // Assuming prompt is set in params
-    this.onAgentMessage({ type: 'llm_input', content: JSON.stringify({ prompt }) });
+    this.onAgentMessage({ type: 'debug', content: JSON.stringify({ prompt }) });
 
     try {
       const llmResponse = await super.execAsync(prepRes, shared);
-      this.onAgentMessage({ type: 'llm_output', content: JSON.stringify(llmResponse) });
-      return llmResponse;
+      this.onAgentMessage({ type: 'llm_response', content: JSON.stringify(llmResponse) });
+      return JSON.parse(llmResponse);
     } catch (error: any) {
       this.onAgentMessage({ type: 'agent', content: `LLM Error: ${error.message}` });
       throw error; // Re-throw to propagate the error
@@ -147,12 +147,12 @@ class QflowAgent {
 
     // Custom onThought callback to send agent's thoughts to the TUI
     this.agentNode.onThought = (thought: string) => {
+      this.onAgentMessage({ type: 'debug', content: `Thought content: ${thought}` });
       this.onAgentMessage({ type: 'thought', content: thought });
     };
 
     // Custom postAsync to handle agent's output and send it to the TUI
     this.agentNode.postAsync = async (shared: any, prepRes: any, execRes: any) => {
-      this.onAgentMessage({ type: 'agent', content: 'DEBUG: postAsync execRes: ' + JSON.stringify(execRes, null, 2) });
       // The AgentNode's execRes will contain the final answer or tool outputs
       if (execRes && execRes.tool === 'finish') {
         this.onAgentMessage({ type: 'agent', content: `Agent finished: ${execRes.output}` });
@@ -174,9 +174,7 @@ class QflowAgent {
     const sharedState = { goal };
     this.agentNode.setParams({ goal: goal });
     try {
-      this.onAgentMessage({ type: 'agent', content: 'DEBUG: AsyncFlow.runAsync started.' });
       await this.agentFlow.runAsync(sharedState);
-      this.onAgentMessage({ type: 'agent', content: 'DEBUG: AsyncFlow.runAsync finished.' });
     } catch (error: any) {
       this.onAgentMessage({ type: 'agent', content: `Error during AsyncFlow execution: ${error.message}` });
       console.error('Error during AsyncFlow execution:', error); // Log to console for more detail
@@ -185,3 +183,4 @@ class QflowAgent {
 }
 
 export default QflowAgent;
+

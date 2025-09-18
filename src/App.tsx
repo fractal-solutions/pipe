@@ -3,6 +3,7 @@ import { box, text, useKeyboard } from '@opentui/react';
 import FileExplorer from './FileExplorer';
 import ChatInterface from './ChatInterface';
 import QflowAgent from './qflowAgent';
+import clipboardy from 'clipboardy';
 
 // Define a simple color palette
 const colors = {
@@ -21,6 +22,7 @@ function App() {
   const [messages, setMessages] = useState<{ type: 'user' | 'agent' | 'tool' | 'thought' | 'llm_input' | 'llm_output'; content: string }[]>([]);
   const [focusedPanel, setFocusedPanel] = useState<'fileExplorer' | 'chat'>('chat');
   const qflowAgentRef = useRef<QflowAgent | null>(null);
+  const [ctrlCPressedOnce, setCtrlCPressedOnce] = useState(false);
 
   // State to manage agent's request for user input
   const [waitingForAgentInput, setWaitingForAgentInput] = useState(false);
@@ -41,7 +43,10 @@ function App() {
     if (!qflowAgentRef.current) {
       qflowAgentRef.current = new QflowAgent(
         (agentMessage) => {
-          setMessages((prevMessages) => [...prevMessages, agentMessage]);
+          setMessages((prevMessages) => {
+            console.log('DEBUG: agentMessage received:', agentMessage); // Log the message
+            return [...prevMessages, agentMessage];
+          });
         },
         handleAgentQuery // Pass the new handler
       );
@@ -50,7 +55,28 @@ function App() {
     setMessages((prevMessages) => [...prevMessages, { type: 'agent', content: 'DEBUG: QflowAgent constructor finished.' }]);
   }, []);
 
+  const handleCopyChat = () => {
+    const llmResponses = messages.filter(msg => msg.type === 'llm_response').map(msg => msg.content).join('\n');
+    clipboardy.writeSync(llmResponses);
+    setMessages((prevMessages) => [...prevMessages, { type: 'agent', content: 'LLM responses copied to clipboard!' }]);
+  };
+
   useKeyboard((key) => {
+    if (key.name === 'y' && key.ctrl) {
+      handleCopyChat();
+      return;
+    }
+    if (key.name === 'c' && key.ctrl) {
+      if (ctrlCPressedOnce) {
+        process.exit(0);
+      } else {
+        setCtrlCPressedOnce(true);
+        setMessages((prevMessages) => [...prevMessages, { type: 'agent', content: 'Press Ctrl+C again to exit.' }]);
+        setTimeout(() => {
+          setCtrlCPressedOnce(false);
+        }, 2000);
+      }
+    }
     if (key.name === 'tab') {
       setFocusedPanel((prev) => (prev === 'chat' ? 'fileExplorer' : 'chat'));
     }
@@ -130,7 +156,7 @@ function App() {
         alignItems="center"
         marginTop={1}
       >
-        <text fg={colors.foreground} content="Press TAB to switch panels | Click to focus | CTRL+C to exit" />
+        <text fg={colors.foreground} content="Press TAB to switch panels | Ctrl+Y to copy chat | Ctrl+C twice to exit" />
       </box>
     </box>
   );

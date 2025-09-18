@@ -3,7 +3,7 @@ import { box, text, input } from '@opentui/core';
 
 interface ChatInterfaceProps {
   onSendMessage: (message: string) => void;
-  messages: { type: 'user' | 'agent' | 'tool' | 'thought' | 'llm_input' | 'llm_output'; content: string }[];
+  messages: { type: 'user' | 'agent' | 'tool' | 'thought' | 'debug' | 'llm_response'; content: string }[];
   focused: boolean;
   colors: any;
   onClick?: () => void;
@@ -13,59 +13,51 @@ interface ChatInterfaceProps {
 // Helper component to format and display message content
 const FormattedMessageContent: React.FC<{ type: string; content: string; colors: any }> = ({ type, content, colors }) => {
   try {
-    if (type === 'llm_input' || type === 'llm_output' || type === 'tool') {
+    if (type === 'tool') {
       const parsedContent = JSON.parse(content);
-
-      if (type === 'tool') {
-        // Display tool name and arguments clearly
+      return (
+        <box flexDirection="column">
+          <text fg={colors.accent}>Tool Call: {parsedContent.tool}</text>
+          <text fg={colors.info}>Arguments: {JSON.stringify(parsedContent.args, null, 2)}</text>
+        </box>
+      );
+    }
+    if (type === 'thought') {
+      return <text fg={colors.secondary}>Thought: {content}</text>;
+    }
+    if (type === 'debug') {
+      return <text fg={colors.info}>DEBUG: {content}</text>;
+    }
+    if (type === 'llm_response') {
+      try {
+        const parsedContent = JSON.parse(content);
         return (
           <box flexDirection="column">
-            <text fg={colors.accent} wordWrapping="long-words">Tool: {parsedContent.tool}</text>
-            <text fg={colors.info} wordWrapping="long-words">Args: {JSON.stringify(parsedContent.args, null, 2)}</text>
+            <text fg={colors.primary}>LLM Response:</text>
+            <text fg={colors.foreground}>Thought: {parsedContent.thought}</text>
+            {parsedContent.tool_calls && parsedContent.tool_calls.length > 0 && (
+              <box flexDirection="column" marginLeft={2}>
+                <text fg={colors.accent}>Tool Calls:</text>
+                {parsedContent.tool_calls.map((tc: any, idx: number) => (
+                  <box key={idx} flexDirection="column" marginLeft={2}>
+                    <text fg={colors.accent}>- Tool: {tc.tool}</text>
+                    <text fg={colors.info}>  Args: {JSON.stringify(tc.parameters)}</text>
+                  </box>
+                ))}
+              </box>
+            )}
           </box>
         );
-      } else if (type === 'llm_input') {
-        // For LLM Input, display the prompt clearly
-        const prompt = parsedContent.prompt || content; // Fallback to raw content
-        return (
-          <box flexDirection="column">
-            <text fg={colors.secondary} wordWrapping="long-words">LLM Input:</text>
-            <text fg={colors.foreground} wordWrapping="long-words">{prompt}</text>
-          </box>
-        );
-      } else if (type === 'llm_output') {
-        // For LLM Output, try to extract thought and tool_calls if present
-        const message = parsedContent.choices?.[0]?.message;
-        if (message) {
-          return (
-            <box flexDirection="column">
-              <text fg={colors.secondary} wordWrapping="long-words">LLM Output:</text>
-              {message.content && <text fg={colors.foreground} wordWrapping="long-words">Content: {message.content}</text>}
-              {message.tool_calls && message.tool_calls.length > 0 && (
-                <box flexDirection="column">
-                  <text fg={colors.accent} wordWrapping="long-words">Tool Calls:</text>
-                  {message.tool_calls.map((tc: any, idx: number) => (
-                    <box key={idx} flexDirection="column" marginLeft={2}>
-                      <text fg={colors.accent} wordWrapping="long-words">- Tool: {tc.function.name}</text>
-                      <text fg={colors.info} wordWrapping="long-words">  Args: {tc.function.arguments}</text>
-                    </box>
-                  ))}
-                </box>
-              )}
-            </box>
-          );
-        } else {
-          // Fallback for unexpected LLM output structure
-          return <text fg={colors.foreground} wordWrapping="long-words">Raw LLM Output: {JSON.stringify(parsedContent, null, 2)}</text>;
-        }
+      } catch (e) {
+        return <text fg={colors.primary}>LLM Response: [Parsing Error] {content}</text>;
       }
     }
   } catch (e) {
     // If parsing fails, display raw content with an error indicator
-    return <text fg={colors.error} wordWrapping="long-words">[Parsing Error] {content}</text>;
+    return <text fg={colors.error}>[Parsing Error] {content}</text>;
   }
   // Default display for other types or if not parsed
-  return <text fg={colors.foreground} wordWrapping="long-words">{content}</text>;
+  return <text fg={colors.foreground}>{content}</text>;
 };
 
 function ChatInterface({ onSendMessage, messages, focused, colors, onClick, waitingForAgentInput }: ChatInterfaceProps) {
@@ -97,6 +89,9 @@ function ChatInterface({ onSendMessage, messages, focused, colors, onClick, wait
       }}
       onClick={onClick}
     >
+      <box flexDirection="row" justifyContent="space-between" alignItems="center" marginBottom={1}>
+        <text fg={colors.foreground}>Agent Chat</text>
+      </box>
       <box flexDirection="column" flexGrow={1} overflow="scroll" marginBottom={1}>
         {messages.map((msg, index) => (
           <box key={index} flexDirection="row" marginBottom={0}>

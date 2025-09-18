@@ -12,6 +12,7 @@
   "dependencies": {
     "@fractal-solutions/qflow": "^1.0.44",
     "@opentui/core": "^0.1.23",
-    "@opentui/react": "^0.1.23"
+    "@opentui/react": "^0.1.23",
+    "clipboardy": "^4.0.0"
   }
 }
