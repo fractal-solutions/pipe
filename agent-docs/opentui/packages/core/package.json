@@ -1,0 +1,67 @@
+{
+  "name": "@opentui/core",
+  "description": "OpenTUI is a TypeScript library for building terminal user interfaces (TUIs)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sst/opentui",
+    "directory": "packages/core"
+  },
+  "types": "src/index.ts",
+  "module": "src/index.ts",
+  "main": "src/index.ts",
+  "version": "0.1.23",
+  "type": "module",
+  "scripts": {
+    "build:dev": "cd src/zig && zig build -Doptimize=Debug",
+    "build:prod": "cd src/zig && zig build -Doptimize=ReleaseFast",
+    "build": "bun run build:native && bun run build:lib",
+    "build:lib": "bun scripts/build.ts --lib",
+    "build:native": "bun scripts/build.ts --native",
+    "test:native": "cd src/zig && zig build test --summary all",
+    "publish": "bun scripts/publish.ts",
+    "test:js": "bun test",
+    "test": "bun run test:native && bun run test:js"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/three": "0.177.0",
+    "commander": "^13.1.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "jimp": "1.6.0",
+    "yoga-layout": "3.2.1"
+  },
+  "optionalDependencies": {
+    "@dimforge/rapier2d-simd-compat": "^0.17.3",
+    "bun-webgpu": "0.1.3",
+    "planck": "^1.4.2",
+    "three": "0.177.0",
+    "@opentui/core-darwin-x64": "0.1.23",
+    "@opentui/core-darwin-arm64": "0.1.23",
+    "@opentui/core-linux-x64": "0.1.23",
+    "@opentui/core-linux-arm64": "0.1.23",
+    "@opentui/core-win32-x64": "0.1.23",
+    "@opentui/core-win32-arm64": "0.1.23"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./3d": {
+      "types": "./src/3d.ts",
+      "import": "./src/3d.ts"
+    },
+    "./testing": {
+      "types": "./src/testing.ts",
+      "import": "./src/testing.ts"
+    }
+  },
+  "engines": {
+    "bun": ">=1.2.0"
+  }
+}

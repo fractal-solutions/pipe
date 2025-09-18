@@ -1,0 +1,63 @@
+{
+  "name": "@fractal-solutions/qflow",
+  "version": "1.0.44",
+  "description": "A lightweight and flexible JavaScript library for creating and managing workflows and agents.",
+  "main": "dist/qflow.js",
+  "types": "dist/qflow.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/qflow.d.ts",
+      "default": "./dist/qflow.js"
+    },
+    "./nodes": {
+      "types": "./dist/nodes/index.d.ts",
+      "default": "./dist/nodes/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "build": "tsc --project tsconfig.build.json"
+  },
+  "keywords": [
+    "workflow",
+    "agents",
+    "pipeline",
+    "automation",
+    "flow",
+    "async",
+    "batch"
+  ],
+  "author": "Fractal Solutions",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fractal-solutions/qflow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fractal-solutions/qflow/issues"
+  },
+  "homepage": "https://github.com/fractal-solutions/qflow#readme",
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "chalk": "^5.6.2",
+    "cheerio": "^1.1.2",
+    "node-cron": "^4.2.1",
+    "playwright": "^1.55.0",
+    "serialport": "^13.0.0",
+    "simple-git": "^3.28.0",
+    "ssh2": "^1.17.0",
+    "ws": "^8.18.3",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.2"
+  }
+}
