@@ -19,6 +19,7 @@ const FormattedMessageContent: React.FC<{ type: string; content: string; colors:
         <box flexDirection="column">
           <text fg={colors.accent}>Tool Call: {parsedContent.tool}</text>
           <text fg={colors.info}>Arguments: {JSON.stringify(parsedContent.args, null, 2)}</text>
+          {parsedContent.output && <text fg={colors.success}>Output: {JSON.stringify(parsedContent.output, null, 2)}</text>}
         </box>
       );
     }

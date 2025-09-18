@@ -56,9 +56,43 @@ function App() {
   }, []);
 
   const handleCopyChat = () => {
-    const llmResponses = messages.filter(msg => msg.type === 'llm_response').map(msg => msg.content).join('\n');
-    clipboardy.writeSync(llmResponses);
-    setMessages((prevMessages) => [...prevMessages, { type: 'agent', content: 'LLM responses copied to clipboard!' }]);
+    const chatHistory = messages.filter(msg => msg.type !== 'debug').map(msg => {
+      if (msg.type === 'llm_response') {
+        try {
+          const parsedContent = JSON.parse(msg.content);
+          const thought = parsedContent.choices?.[0]?.message?.content;
+          const toolCalls = parsedContent.choices?.[0]?.message?.tool_calls;
+          let formattedResponse = `LLM Response:\n  Thought: ${thought || ''}`;
+          if (toolCalls && toolCalls.length > 0) {
+            formattedResponse += '\n  Tool Calls:\n';
+            toolCalls.forEach((tc: any) => {
+              formattedResponse += `    - Tool: ${tc.function.name}\n`;
+              formattedResponse += `      Args: ${tc.function.arguments}\n`;
+            });
+          }
+          return formattedResponse;
+        } catch (e) {
+          return `LLM Response: [Parsing Error] ${msg.content}`;
+        }
+      } else if (msg.type === 'tool') {
+        try {
+          const parsedContent = JSON.parse(msg.content);
+          let formattedTool = `Tool Call: ${parsedContent.tool}\n  Arguments: ${JSON.stringify(parsedContent.args, null, 2)}`;
+          if (parsedContent.output) {
+            formattedTool += `\n  Output: ${JSON.stringify(parsedContent.output, null, 2)}`;
+          }
+          return formattedTool;
+        } catch (e) {
+          return `Tool Call: [Parsing Error] ${msg.content}`;
+        }
+      } else if (msg.type === 'thought') {
+        return `Thought: ${msg.content}`;
+      } else {
+        return `[${msg.type}] ${msg.content}`;
+      }
+    }).join('\n');
+    clipboardy.writeSync(chatHistory);
+    setMessages((prevMessages) => [...prevMessages, { type: 'agent', content: 'Chat history copied to clipboard!' }]);
   };
 
   useKeyboard((key) => {

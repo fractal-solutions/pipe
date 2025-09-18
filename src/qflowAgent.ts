@@ -178,7 +178,7 @@ class QflowAgent {
         this.onAgentMessage({ type: 'agent', content: `Agent finished: ${execRes.output}` });
       } else if (execRes && execRes.tool) {
         // This is a tool execution, we can log it as an agent action
-        this.onAgentMessage({ type: 'tool', content: JSON.stringify({ tool: execRes.tool, args: execRes.args }) });
+        this.onAgentMessage({ type: 'tool', content: JSON.stringify({ tool: execRes.tool, args: execRes.args, output: execRes.output }) });
       } else {
         // Generic agent output
         this.onAgentMessage({ type: 'agent', content: `Agent output: ${JSON.stringify(execRes)}` });
