@@ -154,7 +154,7 @@ class CustomAgentNode extends AsyncNode {
         thought = parsedResponse.thought;
         toolCalls = parsedResponse.toolCalls;
         parallel = parsedResponse.parallel;
-        this.onAgentMessage({ type: 'thought', thoughts: thought });
+        this.onAgentMessage({ type: 'thought', content: thought });
       } catch (e: any) {
         this.onAgentMessage({ type: 'agent', content: `Error parsing LLM response: ${e.message}` });
         this.conversationHistory.push({ role: "user", content: `Error: Your response was not valid JSON or did not follow the expected format. Please respond with a 'thought' and 'tool_calls' array. Error: ${e.message}. Your last response was: ${llmResponse}` });
@@ -210,8 +210,6 @@ class CustomAgentNode extends AsyncNode {
 
           let toolOutput;
           try {
-            this.onAgentMessage({ type: 'tool', tool_name: toolCall.tool, tool_params: toolCall.parameters });
-
             if (toolCall.tool === 'sub_flow' || toolCall.tool === 'iterator' || toolCall.tool === 'scheduler') {
               const flowName = toolCall.parameters.flow;
               if (!this.flowRegistry[flowName]) {
@@ -231,7 +229,7 @@ class CustomAgentNode extends AsyncNode {
               toolOutput = toolFlow.run({});
             }
             this.onAgentMessage({ type: 'agent', content: `Tool execution finished for: ${toolCall.tool}` });
-            this.onAgentMessage({ type: 'tool_result', tool_name: toolCall.tool, tool_output: toolOutput });
+            this.onAgentMessage({ type: 'tool', content: JSON.stringify({ tool: toolCall.tool, args: toolCall.parameters, output: toolOutput }) });
 
             if (this.summarizeLLM && typeof toolOutput === 'string' && toolOutput.length > 1000) {
               this.onAgentMessage({ type: 'agent', content: `Summarizing large tool output (${toolOutput.length} chars)...` });
