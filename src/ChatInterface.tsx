@@ -8,6 +8,7 @@ interface ChatInterfaceProps {
   colors: any;
   onClick?: () => void;
   waitingForAgentInput: boolean;
+  flexGrow?: number;
 }
 
 // Helper component to format and display message content
@@ -64,7 +65,7 @@ const FormattedMessageContent: React.FC<{ type: string; content: string; colors:
   return <text fg={colors.foreground}>{content}</text>;
 };
 
-function ChatInterface({ onSendMessage, messages, focused, colors, onClick, waitingForAgentInput }: ChatInterfaceProps) {
+function ChatInterface({ onSendMessage, messages, focused, colors, onClick, waitingForAgentInput, flexGrow }: ChatInterfaceProps) {
   const [inputValue, setInputValue] = useState('');
 
   const handleInputChange = (value: string) => {
@@ -80,6 +81,7 @@ function ChatInterface({ onSendMessage, messages, focused, colors, onClick, wait
 
   return (
     <box
+      flexGrow={flexGrow}
       height="100%"
       borderStyle="rounded"
       borderColor={focused ? colors.focusedBorder : colors.border}

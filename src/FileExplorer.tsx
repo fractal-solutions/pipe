@@ -7,6 +7,7 @@ interface FileExplorerProps {
   focused: boolean;
   colors: any;
   onClick?: () => void; // Add onClick prop
+  flexGrow?: number;
 }
 
 interface FileItem {
@@ -16,7 +17,7 @@ interface FileItem {
   mtime: Date | null; // Modification time
 }
 
-function FileExplorer({ focused, colors, onClick }: FileExplorerProps) {
+function FileExplorer({ focused, colors, onClick, flexGrow }: FileExplorerProps) {
   const [currentPath, setCurrentPath] = useState('.');
   const [items, setItems] = useState<FileItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -117,7 +118,7 @@ function FileExplorer({ focused, colors, onClick }: FileExplorerProps) {
 
   return (
     <scrollbox
-      width="50%"
+      flexGrow={flexGrow}
       height="100%"
       borderStyle="rounded"
       borderColor={focused ? colors.focusedBorder : colors.border}

@@ -1,0 +1,11 @@
+Tool Demonstration File
+======================
+
+This file was created to showcase various tool capabilities including:
+- File creation and writing
+- File reading
+- Directory listing
+- System notifications
+- User interaction
+
+Let's demonstrate what Q can do!

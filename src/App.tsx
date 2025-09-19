@@ -162,12 +162,12 @@ function App() {
       </box>
 
       {/* Main Content Area */}
-      <box flexDirection="row" flexGrow={1}>
+      <box flexDirection="row" flexGrow={1} width="100%">
         <FileExplorer
           focused={focusedPanel === 'fileExplorer'}
           colors={colors}
           onClick={() => setFocusedPanel('fileExplorer')}
-          flexGrow={1} // Use flexGrow instead of fixed width
+          flexGrow={1}
         />
         <ChatInterface
           focused={focusedPanel === 'chat'}
@@ -176,7 +176,7 @@ function App() {
           colors={colors}
           onClick={() => setFocusedPanel('chat')}
           waitingForAgentInput={waitingForAgentInput}
-          flexGrow={2} // Give chat interface more space
+          flexGrow={1}
         />
       </box>
 
