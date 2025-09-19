@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { box, text, input } from '@opentui/core';
+import { box, text, input, scrollbox } from '@opentui/react';
 
 interface ChatInterfaceProps {
   onSendMessage: (message: string) => void;
@@ -96,14 +96,20 @@ function ChatInterface({ onSendMessage, messages, focused, colors, onClick, wait
       <box flexDirection="row" justifyContent="space-between" alignItems="center" marginBottom={1}>
         <text fg={colors.foreground}>Agent Chat</text>
       </box>
-      <box flexDirection="column" flexGrow={1} overflow="scroll" marginBottom={1}>
+      <scrollbox
+        flexGrow={1}
+        marginBottom={1}
+        focused={focused}
+        stickyScroll={true}
+        stickyStart="bottom"
+      >
         {messages.map((msg, index) => (
           <box key={index} flexDirection="row" marginBottom={0}>
             <text fg={colors.info}>[{new Date().toLocaleTimeString()}] </text>
             <FormattedMessageContent type={msg.type} content={msg.content} colors={colors} />
           </box>
         ))}
-      </box>
+      </scrollbox>
       <input
         placeholder={waitingForAgentInput ? "Agent is waiting for your input..." : "Type your message..."}
         value={inputValue}
