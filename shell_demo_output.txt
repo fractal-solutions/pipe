@@ -1,0 +1,10 @@
+Shell Command Demonstration Output
+=================================
+
+Command Executed: echo 'Demonstrating shell command execution' && date
+
+Expected Output:
+- Demonstrating shell command execution
+- Current date and time
+
+This file demonstrates the shell_command tool capability to execute system commands and capture their output for demonstration purposes.

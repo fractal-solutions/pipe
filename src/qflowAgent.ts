@@ -14,6 +14,17 @@ interface AgentMessage {
   tool_output?: any;
 }
 
+interface DeepSeekChoice {
+  message: {
+    role: String;
+    content: String;
+  };
+}
+
+interface DeepSeekResponse {
+  choices: DeepSeekChoice[];
+}
+
 class AgentDeepSeekLLMNode extends DeepSeekLLMNode {
   private onAgentMessage: (message: AgentMessage) => void;
 
@@ -72,12 +83,12 @@ class AgentDeepSeekLLMNode extends DeepSeekLLMNode {
       throw new Error(`DeepSeek API error: ${response.status} - ${errorData.error.message}`);
     }
 
-    const data = await response.json();
-    if (!data.choices || data.choices.length === 0 || !data.choices[0].message || typeof data.choices[0].message.content !== 'string') {
+    const data = (await response.json()) as DeepSeekResponse;
+    if (!data.choices || data.choices.length === 0 || !data.choices[0]!.message || typeof data.choices[0]!.message.content !== 'string') {
       throw new Error('Invalid response structure from DeepSeek API or missing content.');
     }
     
-    const llmResponse = data.choices[0].message.content.trim();
+    const llmResponse = data.choices[0]!.message.content.trim();
     this.onAgentMessage({ type: 'debug', content: `[DeepSeek] Received response for \"${keyword || 'agent_reasoning'}\".` });
     return llmResponse;
   }
@@ -118,7 +129,7 @@ class CustomAgentNode extends AsyncNode {
     this.maxConversationHistoryTokens = maxConversationHistoryTokens;
   }
 
-  async execAsync() {
+  override async execAsync() {
     const { goal } = this.params;
     if (!goal) {
       throw new Error("AgentNode requires a 'goal' parameter.");
@@ -434,7 +445,7 @@ class CustomAgentNode extends AsyncNode {
     throw new Error(`Invalid LLM response structure. Raw Data: ${JSON.stringify(rawData)}`);
   }
 
-  async postAsync(shared: any, prepRes: any, execRes: any) {
+  override async postAsync(shared: any, prepRes: any, execRes: any) {
     shared.agentOutput = execRes;
     return execRes;
   }
